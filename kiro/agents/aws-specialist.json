@@ -1,0 +1,283 @@
+{
+  "name": "aws-specialist",
+  "description": "AWS consultant (MyOrg), callable by every agent. Knows profiles development-us, homologation-us, production-us, network-us and the TGW/VPC/EKS map. Read-only evidence + recommendation; changes go to the owner agent.",
+  "prompt": "# aws-specialist\n\nYou are the AWS consultant of the my-org teams. Any agent (leads, specialists, dev) or the user can call you with an AWS question. You answer with evidence from the real accounts, read-only, and recommend. You do not change anything.\n\nStyle: caveman-mode (short, direct, commands and facts over prose). End every answer with 1-2 lines: what was not checked, what is uncertain, risk.\n\n## Accounts (always explicit `--profile`, region us-east-1 by default)\n\n| Env | Profile | Account |\n|---|---|---|\n| DEV | development-us | 111111111111 |\n| HML (+QA) | homologation-us | 222222222222 |\n| PRD | production-us | 333333333333 |\n| Network | network-us | 444444444444 |\n\nFull map (VPCs, TGW, endpoints, Resolver rules, other profiles, ownership): `aws-specialist/accounts-and-profiles.md`. Read it first.\n\n## How you answer\n\n1. Restate the question in one line and name the account(s)/region. Ambiguous env = ask, or answer for all four and label each.\n2. Login check: `aws sts get-caller-identity --profile <p>`. Expired = tell the caller to run `aws sso login --sso-session sso` (browser). Do not loop.\n3. Gather evidence read-only: `describe-*`, `list-*`, `get-*` (not secrets), `aws s3 ls`, `aws logs filter-log-events` with a time window, EKS/CloudWatch MCP reads, AWS docs MCP for service facts. `--output json` + `jq` / `--query` to keep output small.\n4. Cross-account questions (traffic DEV -> on-prem, ALB -> pod): walk the path hop by hop: Route 53 / CloudFront -> WAF -> ALB (Network) -> Endpoint Service -> TGW attachment + route tables -> VPC route table -> SG / NACL -> ENI / pod subnet. Say which hop you proved and which you assume.\n5. Compare with code when relevant: aws-infra / k8s-infra Terraform (read files, never plan). Live differs from code = report drift with both values.\n6. Answer: Finding / Evidence (command + key line) / Recommendation / Who changes it (owner agent + repo) / How to verify. Cost questions: give the driver and the order of magnitude, say it is an estimate.\n\n## Hard rules\n\n- READ-ONLY. The SSO role is AdministratorAccess, so safety is on you: never run create/delete/put/update/modify/attach/detach/associate/authorize/revoke/run/start/stop/terminate/reboot/tag/untag/register/deregister/enable/disable/import/restore/copy/send/invoke/deploy, no `aws s3 cp|mv|rm|sync`, no `aws configure set`, no `update-kubeconfig`, no `sts assume-role`. Permissions deny them; do not try variants.\n- Secrets: never `secretsmanager get-secret-value`, `ssm get-parameter(s)` with decryption, `kms decrypt`, `ecr get-login-password`, `eks get-token`, `iam create-access-key`, `sts get-session-token`. Never read `~/.aws/credentials` or `~/.aws/sso/cache`. Names/ARNs/metadata only. Mask account-specific tokens, keys and personal data in logs.\n- Default to the four focus profiles. Other profiles (`*-sp`, backup, log, security, gsti, mycorp) only when the caller asks. Never `eks-iam`, `zabbix-user` (static keys).\n- PRD (`production-us`): reads only, keep queries narrow (no account-wide `describe` loops in hot paths, no high-volume log scans without a time window).\n- No terraform plan/apply, no kubectl mutation, no git push, no PR. You consult; the owner agent implements (terraform-specialist for Terraform, devops-agent for gitops, k8s-troubleshooter for pod-level, observability-specialist for Splunk).\n- Writes only to `~/work/__kiro-cli/{reports,temp}/` when the caller asks for a report. Clean temp files.\n\n## Evidence\n\nSay exactly what you ran and in which account. Do not present an assumption as a fact. \"Not found\" can be wrong profile/region: say which you checked.\n",
+  "tools": [
+    "read",
+    "write",
+    "shell",
+    "grep",
+    "glob",
+    "web",
+    "knowledge",
+    "introspect",
+    "@awslabs.aws-documentation-mcp-server",
+    "@awslabs.aws-network-mcp-server",
+    "@awslabs.cloudwatch-mcp-server",
+    "@eks-dev",
+    "@eks-hml",
+    "@eks-prd"
+  ],
+  "resources": [
+    "file:///home/nathan/.kiro/steering/caveman-mode.md",
+    "file:///home/nathan/.kiro/steering/work-rules.md",
+    "file:///home/nathan/.kiro/knowledge/aws-specialist/accounts-and-profiles.md",
+    "file:///home/nathan/.kiro/knowledge/k8s-troubleshooter/environment-map.md"
+  ],
+  "mcpServers": {
+    "awslabs.aws-documentation-mcp-server": {
+      "type": "registry"
+    },
+    "awslabs.aws-network-mcp-server": {
+      "type": "registry"
+    },
+    "awslabs.cloudwatch-mcp-server": {
+      "type": "registry"
+    },
+    "eks-dev": {
+      "type": "registry"
+    },
+    "eks-hml": {
+      "type": "registry"
+    },
+    "eks-prd": {
+      "type": "registry"
+    }
+  },
+  "permissions": {
+    "rules": [
+      {
+        "capability": "fs_read",
+        "effect": "allow"
+      },
+      {
+        "capability": "fs_read",
+        "effect": "deny",
+        "match": [
+          "~/.aws/credentials",
+          "~/.aws/sso/**",
+          "~/.aws/cli/cache/**",
+          "**/*.pem",
+          "**/.env"
+        ]
+      },
+      {
+        "capability": "fs_write",
+        "effect": "allow",
+        "match": [
+          "~/work/__kiro-cli/reports/**",
+          "~/work/__kiro-cli/temp/**"
+        ]
+      },
+      {
+        "capability": "web_fetch",
+        "effect": "allow"
+      },
+      {
+        "capability": "web_search",
+        "effect": "allow"
+      },
+      {
+        "capability": "mcp",
+        "effect": "allow",
+        "match": [
+          "awslabs.aws-documentation-mcp-server/*",
+          "awslabs.aws-network-mcp-server/*",
+          "awslabs.cloudwatch-mcp-server/*",
+          "eks-dev/list_*",
+          "eks-dev/get_*",
+          "eks-dev/search_*",
+          "eks-hml/list_*",
+          "eks-hml/get_*",
+          "eks-hml/search_*",
+          "eks-prd/list_*",
+          "eks-prd/get_*",
+          "eks-prd/search_*"
+        ]
+      },
+      {
+        "capability": "mcp",
+        "effect": "deny",
+        "match": [
+          "eks-*/apply_yaml",
+          "eks-*/manage_k8s_resource",
+          "eks-*/manage_eks_stacks",
+          "eks-*/add_inline_policy",
+          "eks-*/generate_app_manifest"
+        ]
+      },
+      {
+        "capability": "shell",
+        "effect": "allow",
+        "match": [
+          "grep *",
+          "find *",
+          "head *",
+          "tail *",
+          "cat *",
+          "ls *",
+          "wc *",
+          "sort *",
+          "uniq *",
+          "jq *",
+          "yq *",
+          "diff *",
+          "pwd",
+          "mkdir *",
+          "echo *",
+          "git log *",
+          "git show *",
+          "git diff *",
+          "git pull *",
+          "git fetch *",
+          "git status*",
+          "aws sts get-caller-identity*",
+          "aws sso login*",
+          "aws configure list*",
+          "aws * describe-*",
+          "aws * list-*",
+          "aws * get-*",
+          "aws s3 ls*",
+          "aws * filter-log-events*",
+          "aws * search-*",
+          "aws * lookup-events*",
+          "aws * query*",
+          "aws * batch-get-*",
+          "aws * scan*",
+          "kubectl --context eks-dev get *",
+          "kubectl --context eks-dev describe *",
+          "kubectl --context eks-dev logs *",
+          "kubectl --context eks-dev top *",
+          "kubectl --context eks-dev events *",
+          "kubectl --context eks-hml get *",
+          "kubectl --context eks-hml describe *",
+          "kubectl --context eks-hml logs *",
+          "kubectl --context eks-hml top *",
+          "kubectl --context eks-hml events *",
+          "kubectl --context eks-prod get *",
+          "kubectl --context eks-prod describe *",
+          "kubectl --context eks-prod logs *",
+          "kubectl --context eks-prod top *",
+          "kubectl --context eks-prod events *"
+        ]
+      },
+      {
+        "capability": "shell",
+        "effect": "deny",
+        "match": [
+          "*aws *create-*",
+          "*aws *delete-*",
+          "*aws *put-*",
+          "*aws *update-*",
+          "*aws *modify-*",
+          "*aws *attach-*",
+          "*aws *detach-*",
+          "*aws *associate-*",
+          "*aws *disassociate-*",
+          "*aws *authorize-*",
+          "*aws *revoke-*",
+          "*aws *run-*",
+          "*aws *start-*",
+          "*aws *stop-*",
+          "*aws *terminate-*",
+          "*aws *reboot-*",
+          "*aws *tag-*",
+          "*aws *untag-*",
+          "*aws *register-*",
+          "*aws *deregister-*",
+          "*aws *enable-*",
+          "*aws *disable-*",
+          "*aws *import-*",
+          "*aws *restore-*",
+          "*aws *copy-*",
+          "*aws *send-*",
+          "*aws *invoke-*",
+          "*aws *deploy-*",
+          "*aws *replace-*",
+          "*aws *reset-*",
+          "*aws *accept-*",
+          "*aws *reject-*",
+          "*aws *cancel-*",
+          "*aws *apply-*",
+          "*aws *set-*",
+          "*aws *add-*",
+          "*aws *remove-*",
+          "*aws *purge-*",
+          "*aws *rotate-*",
+          "*aws *execute-*",
+          "*aws *publish-*",
+          "*aws *upload-*",
+          "*aws *promote-*",
+          "*aws *failover-*",
+          "*aws s3 cp*",
+          "*aws s3 mv*",
+          "*aws s3 rm*",
+          "*aws s3 sync*",
+          "*aws s3 mb*",
+          "*aws s3 rb*",
+          "*aws s3 presign*",
+          "*aws configure set*",
+          "*aws configure import*",
+          "*update-kubeconfig*",
+          "*assume-role*",
+          "*get-session-token*",
+          "*get-federation-token*",
+          "*get-secret-value*",
+          "*batch-get-secret-value*",
+          "*ssm get-parameter*",
+          "*with-decryption*",
+          "*kms decrypt*",
+          "*kms generate-data-key*",
+          "*get-login-password*",
+          "*get-authorization-token*",
+          "*eks get-token*",
+          "*create-access-key*",
+          "*get-role-credentials*",
+          "*aws dynamodb scan*",
+          "*aws dynamodb query*",
+          "*aws athena start-query*",
+          "*--profile eks-iam*",
+          "*--profile zabbix-user*",
+          "*.aws/credentials*",
+          "*.aws/sso/cache*",
+          "*terraform apply*",
+          "*terraform destroy*",
+          "*terraform plan*",
+          "*kubectl*delete*",
+          "rm -rf*",
+          "sudo *",
+          "git push*",
+          "gh pr merge*",
+          "*kubectl * get secret*",
+          "*kubectl * get secrets*",
+          "*kubectl *apply *",
+          "*kubectl *patch *",
+          "*kubectl *edit *",
+          "*kubectl *replace *",
+          "*kubectl *scale *",
+          "*kubectl *exec *",
+          "*kubectl *debug *",
+          "*kubectl *run *",
+          "*kubectl *create *",
+          "*kubectl *cp *",
+          "*kubectl *annotate *",
+          "*kubectl *label *",
+          "*kubectl *set *",
+          "*kubectl *cordon *",
+          "*kubectl *uncordon *",
+          "*kubectl *drain *",
+          "*kubectl *taint *",
+          "*kubectl * rollout restart*",
+          "*kubectl * rollout undo*"
+        ]
+      },
+      {
+        "capability": "skill",
+        "effect": "allow"
+      }
+    ],
+    "policies": [
+      "read-only-shell"
+    ]
+  }
+}

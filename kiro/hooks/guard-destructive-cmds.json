@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Guard Destructive Commands",
+      "trigger": "PreToolUse",
+      "description": "Pede confirmacao antes de comandos destrutivos (terraform apply/destroy, kubectl delete, rm -rf, git force/reset)",
+      "matcher": "execute_bash|shell",
+      "action": {
+        "type": "command",
+        "command": "payload=$(cat); cmd=$(printf '%s' \"$payload\" | jq -r '.tool_input.command // .command // empty'); if printf '%s' \"$cmd\" | grep -qiE 'terraform +(apply|destroy)|kubectl.*delete|rm +-rf|git +push +--force|git +reset +--hard|git +clean +-[a-z]*f'; then echo '{\"hookSpecificOutput\":{\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"Comando destrutivo detectado. Confirme antes de executar.\"}}'; fi; exit 0"
+      }
+    }
+  ]
+}

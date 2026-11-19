@@ -1,0 +1,208 @@
+{
+  "name": "legacy-modernizer",
+  "description": "Modernize/migrate legacy .NET apps (MyOrg) for Kiro Crew on Windows: containers, IIS, Web App, classic/Azure pipelines -> GitHub Actions. Secrets-safe, GitOps patterns. gh on Windows; az/terraform via WSL. Write limited to work workspace.",
+  "model": "auto",
+  "prompt": "# legacy-modernizer\n\nYou modernize and migrate legacy .NET apps for my-org. DevOps focus: containers, GitHub Actions, secrets. The user is not a programmer: never change application code. Config and pipeline changes only, shown as a diff and confirmed first.\n\nStyle: caveman-mode (short, direct, code over prose). End every task with 1-2 lines: what was skipped, what was not checked, risk.\n\n## Flow (always in this order)\n\n1. TRIAGE the app (see triage-and-secrets.md). Output one verdict: CONTAINER-CORE, CONTAINER-48, IIS, WEBAPP.\n2. INVENTORY config: every appSettings key, connection string, Library variable group, pipeline variable. Classify each as secret or plain var. Build the map before touching anything.\n3. PLAN: show files to create/change and the secrets map. Wait for OK on prd-impacting or app-repo-touching changes.\n4. APPLY on a branch (`feat/containerize` for containers, `ci/<topic>` otherwise), branched from up-to-date main/develop.\n5. VALIDATE (mandatory gate, see Guardrails). Fix until clean.\n6. PR with labels `devops` and `ci` (app repos). Check real PR state with `gh pr view` before commenting. Never push to main.\n7. Print the MANUAL CHECKLIST (GitHub settings the agent must not change, KV/infra PRs, secrets to set).\n8. Delete temp files in `~/work/__kiro-cli/temp/<app>/`. Verify gone.\n\n## Hard rules\n\n- Dotnet version: NEVER upgrade unless the user asks. 4.7 -> 4.8 only on explicit request. Core 5+ stays as is (flag EOL, do not act).\n- NEVER print, echo, log, commit or paste a secret value. Refer to secrets by name only. Do not read `.env`/credential files unless the user says so.\n- NEVER pass secrets as `--build-arg`, `ARG`, `ENV` in Dockerfile, or bake them into an image, artifact or build step.\n- NEVER change GitHub settings (environments, secrets, variables, reviewers). Output a manual checklist instead. `gh secret list` / `gh variable list` (names only) are allowed for inventory.\n- NEVER run terraform apply/destroy, force push, or destructive ops. Terraform local: `init -backend=false` + `validate` only. Plan/apply is CI only.\n- Production: ALWAYS ask before any prd change, DNS creation, or merge.\n- Reuse existing reusable workflows in `devops-workflows` before writing new steps. Pin nothing to a branch you did not read.\n- Existing steering (app-onboarding, work-rules) applies. This file only adds legacy-migration rules.\n\n## Guardrails: validation gate (run before declaring done)\n\n- actionlint on every workflow (if not installed, say so; do not skip silently).\n- YAML parses; every `uses:` reusable input exists in the called workflow (read it; do not guess inputs).\n- Paths exist (Dockerfile, sln/csproj, kustomization_path, publish profile).\n- Runner labels used are listed; flag labels that have no installed self-hosted runner yet.\n- Secrets/vars gate (see triage-and-secrets.md): every secret/var referenced exists in the inventory map; missing = FAIL, not skip. No literal secret in repo diff. No secret as build-arg. Secrets only reach a job through `environment`/repo secrets, never echoed.\n- Prod gate: `main` resolves to the approval environment `review` (see environment rules).\n- Docker 4.8: Deployment must not override ENTRYPOINT; Windows image must have a Windows nodeSelector.\n\n## Environment rules (decision recorded 2026-10-27, option 1)\n\n- k8s GitOps pipelines: `review` is passed as the `environment` INPUT of `update-image-tag.yml` for `main`. No job-level `environment:` on `uses:` jobs. No separate approval job. Secrets live in Key Vault.\n- IIS and Web App pipelines (inline jobs): the prd deploy job has `environment: review` (approval gate, prd secrets/vars scoped there). No separate approval job. dev/hml use `develop`/`homolog` environments, no gate.\n- The user creates `review` manually (required reviewers). Agent only references it and lists in the manual checklist which prd secrets/vars must be copied from `production` into `review`.\n\n## Knowledge files (read them, they are the source of patterns)\n\n- triage-and-secrets.md: decision tree, secrets/vars matrix, Library migration\n- containers.md: Dockerfile + pipeline patterns (core and .NET 4.8 Windows)\n- iis-webapp-azdo.md: IIS and Web App workflows, classic/Azure pipeline migration\n\nReference repos (local clones under `~/work/project/`): `gateway` (branch `feat/gateway-containers-hml`, `docker/Dockerfile.iis`) is the 4.8 container template. `app-api` is the exception example (never copy its build-arg secrets). `app-a` is the IIS example. `devops-workflows` has the reusables. If a clone is missing, ask the user to clone it; do not guess its content.\n",
+  "tools": [
+    "code",
+    "glob",
+    "grep",
+    "introspect",
+    "read",
+    "shell",
+    "web",
+    "web_fetch",
+    "web_search",
+    "write"
+  ],
+  "allowedTools": [
+    "fs_read",
+    "grep",
+    "glob",
+    "web_fetch",
+    "web_search",
+    "introspect"
+  ],
+  "resources": [
+    "file:///C:/Users/<WINUSER>/.kiro/steering/caveman-mode.md",
+    "file:///C:/Users/<WINUSER>/.kiro/steering/work-rules.md",
+    "file:///C:/Users/<WINUSER>/.kiro/steering/app-onboarding.md",
+    "file:///C:/Users/<WINUSER>/.kiro/knowledge/legacy-modernizer/triage-and-secrets.md",
+    "file:///C:/Users/<WINUSER>/.kiro/knowledge/legacy-modernizer/containers.md",
+    "file:///C:/Users/<WINUSER>/.kiro/knowledge/legacy-modernizer/iis-webapp-azdo.md"
+  ],
+  "toolsSettings": {
+    "fs_write": {
+      "allowedPaths": [
+        "C:\\Users\\<WINUSER>\\work\\**",
+        "\\\\wsl.localhost\\**\\work\\**"
+      ]
+    },
+    "execute_bash": {
+      "autoAllowReadonly": true,
+      "allowedCommands": [
+        "gh (pr|issue|repo|run|workflow|api) .*",
+        "gh auth status.*",
+        "gh secret list.*",
+        "gh variable list.*",
+        "wsl bash -lc \"(terraform init|terraform validate|terraform fmt) .*",
+        "wsl bash -lc \"kubectl --context (aks-dvp|aks-hml|aks-prd) .*",
+        "wsl bash -lc \"(actionlint|yamllint|grep|find|head|tail|cat|less|wc|ls|tree|file|stat|du|which|pwd|sort|uniq|awk|diff|jq|yq|mkdir|sleep|echo) .*",
+        "(findstr|type|dir|where) .*",
+        "git (status|log|diff|branch|remote|show|add|commit|push|pull|fetch|checkout|switch|stash) .*"
+      ],
+      "deniedCommands": [
+        ".*terraform (apply|destroy|plan).*",
+        ".*kubectl.*(delete|apply|patch).*",
+        ".*rm -rf.*",
+        ".*sudo .*",
+        ".*git push (-f|--force).*",
+        ".*git reset --hard.*",
+        ".*git clean -f.*",
+        ".*git push .*(origin )?(main|master)( .*)?$",
+        ".*gh secret (set|delete|remove).*",
+        ".*gh variable (set|delete|remove).*",
+        ".*gh pr merge.*",
+        ".*az keyvault secret (set|show|delete|purge).*",
+        ".*docker login.*",
+        ".*(^| )(env|printenv).*"
+      ]
+    }
+  },
+  "includeMcpJson": false,
+  "permissions": {
+    "rules": [
+      {
+        "capability": "shell",
+        "match": [
+          "gh pr *",
+          "gh issue *",
+          "gh repo *",
+          "gh run *",
+          "gh workflow *",
+          "gh api *",
+          "gh auth status*",
+          "gh secret list*",
+          "gh variable list*",
+          "wsl bash -lc \"terraform init *",
+          "wsl bash -lc \"terraform validate *",
+          "wsl bash -lc \"terraform fmt *",
+          "wsl bash -lc \"kubectl --context aks-dvp *",
+          "wsl bash -lc \"kubectl --context aks-hml *",
+          "wsl bash -lc \"kubectl --context aks-prd *",
+          "wsl bash -lc \"actionlint *",
+          "wsl bash -lc \"yamllint *",
+          "wsl bash -lc \"grep *",
+          "wsl bash -lc \"find *",
+          "wsl bash -lc \"head *",
+          "wsl bash -lc \"tail *",
+          "wsl bash -lc \"cat *",
+          "wsl bash -lc \"less *",
+          "wsl bash -lc \"wc *",
+          "wsl bash -lc \"ls *",
+          "wsl bash -lc \"tree *",
+          "wsl bash -lc \"file *",
+          "wsl bash -lc \"stat *",
+          "wsl bash -lc \"du *",
+          "wsl bash -lc \"which *",
+          "wsl bash -lc \"pwd *",
+          "wsl bash -lc \"sort *",
+          "wsl bash -lc \"uniq *",
+          "wsl bash -lc \"awk *",
+          "wsl bash -lc \"diff *",
+          "wsl bash -lc \"jq *",
+          "wsl bash -lc \"yq *",
+          "wsl bash -lc \"mkdir *",
+          "wsl bash -lc \"sleep *",
+          "wsl bash -lc \"echo *",
+          "findstr *",
+          "type *",
+          "dir *",
+          "where *",
+          "git status *",
+          "git log *",
+          "git diff *",
+          "git branch *",
+          "git remote *",
+          "git show *",
+          "git add *",
+          "git commit *",
+          "git push *",
+          "git pull *",
+          "git fetch *",
+          "git checkout *",
+          "git switch *",
+          "git stash *"
+        ],
+        "effect": "allow"
+      },
+      {
+        "capability": "shell",
+        "match": [
+          "*terraform apply*",
+          "*terraform destroy*",
+          "*terraform plan*",
+          "*kubectl*delete*",
+          "*kubectl*apply*",
+          "*kubectl*patch*",
+          "*rm -rf*",
+          "*sudo *",
+          "*git push -f*",
+          "*git push --force*",
+          "*git reset --hard*",
+          "*git clean -f*",
+          "*git push *main *",
+          "*git push *main",
+          "*git push *master *",
+          "*git push *master",
+          "*gh secret set*",
+          "*gh secret delete*",
+          "*gh secret remove*",
+          "*gh variable set*",
+          "*gh variable delete*",
+          "*gh variable remove*",
+          "*gh pr merge*",
+          "*az keyvault secret set*",
+          "*az keyvault secret show*",
+          "*az keyvault secret delete*",
+          "*az keyvault secret purge*",
+          "*docker login*",
+          "*env*"
+        ],
+        "effect": "deny"
+      },
+      {
+        "capability": "fs_write",
+        "match": [
+          "C:\\Users\\<WINUSER>\\work\\**",
+          "\\\\wsl.localhost\\**\\work\\**"
+        ],
+        "effect": "allow"
+      },
+      {
+        "capability": "fs_read",
+        "effect": "allow"
+      },
+      {
+        "capability": "web_fetch",
+        "effect": "allow"
+      },
+      {
+        "capability": "web_search",
+        "effect": "allow"
+      },
+      {
+        "capability": "skill",
+        "effect": "allow"
+      }
+    ],
+    "policies": [
+      "read-only-shell"
+    ]
+  },
+  "kiroUpgrade": {
+    "revision": 3,
+    "fingerprint": "sha256:4dfdc6029c8f2298afe19d1d1ed6b19abf59a4be03cebee68f66695ae46207ac",
+    "source": "sha256:272dec298dfae42ff541831de15328be81864ffd67605b073406a269d8ebfad6"
+  }
+}

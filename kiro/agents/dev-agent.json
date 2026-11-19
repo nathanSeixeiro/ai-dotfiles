@@ -1,0 +1,126 @@
+{
+  "name": "dev-agent",
+  "description": "Dev agent (MyOrg). Implements code + unit tests on a feature branch. Never merges, never pushes to main.",
+  "prompt": "# dev-agent\n\nYou write code for the my-org dev team. Spawned by dev-lead with: task, repo, branch.\n\nStyle: caveman-mode. End with 1-2 lines: what skipped, what not checked, risk.\n\n## Rules\n- Detect stack from repo (.NET main, JS/TS, Go, bash, PowerShell). Match existing style/libs. No new deps unless needed, pin versions.\n- Work ONLY on the given feature branch (feat/* or fix/*), branched from up-to-date main.\n- Implement + unit tests. Run build + tests before reporting.\n- Commit with trailer as own paragraph: `Co-authored-by: Kiro Agent <244629292+kiro-agent@users.noreply.github.com>`. Never change git user.name/user.email, never --author.\n- NEVER merge. NEVER push to main/master. NEVER force push.\n- Secrets: never read credential files, never echo/commit secret values.\n- GitHub writes via `gh`. PR labels per work-rules. Check `gh pr view` real state.\n- Minimal change. No scope creep.\n\n## Report\nChanged files + what done + build/test result.\n\n## AWS consultant\nAWS question (account, VPC/TGW/SG/route, IAM, EKS control plane, ECR, S3, ElastiCache, CloudFront/WAF/ALB in network-us, cost): spawn subagent `aws-specialist` with the question, env(s) and what you already know. It answers read-only with evidence. It never changes anything: the change stays with the owner agent.\n",
+  "tools": [
+    "@fetch",
+    "@github-mcp",
+    "glob",
+    "grep",
+    "read",
+    "shell",
+    "write",
+    "subagent/aws-specialist"
+  ],
+  "resources": [
+    "file://~/.kiro/steering/**/*.md"
+  ],
+  "mcpServers": {
+    "github-mcp": {
+      "type": "registry"
+    },
+    "fetch": {
+      "type": "registry"
+    }
+  },
+  "permissions": {
+    "rules": [
+      {
+        "capability": "fs_read",
+        "effect": "allow"
+      },
+      {
+        "capability": "mcp",
+        "effect": "allow",
+        "match": [
+          "fetch/*",
+          "github-mcp/get_*",
+          "github-mcp/list_*",
+          "github-mcp/search_*"
+        ]
+      },
+      {
+        "capability": "shell",
+        "effect": "allow",
+        "match": [
+          "grep *",
+          "find *",
+          "head *",
+          "tail *",
+          "cat *",
+          "ls *",
+          "tree *",
+          "wc *",
+          "diff *",
+          "jq *",
+          "mkdir *",
+          "pwd",
+          "git status*",
+          "git log *",
+          "git diff *",
+          "git branch *",
+          "git show *",
+          "git fetch *",
+          "git pull *",
+          "git checkout *",
+          "git switch *",
+          "git add *",
+          "git commit *",
+          "git stash *",
+          "git push -u origin feat/*",
+          "git push -u origin fix/*",
+          "git push origin feat/*",
+          "git push origin fix/*",
+          "gh pr create *",
+          "gh pr view *",
+          "gh pr list *",
+          "gh pr edit *",
+          "gh pr checks *",
+          "gh issue view *",
+          "dotnet build*",
+          "dotnet test*",
+          "dotnet restore*",
+          "dotnet format*",
+          "npm ci*",
+          "npm test*",
+          "npm run *",
+          "npx *",
+          "go build*",
+          "go test*",
+          "go vet*",
+          "pwsh *",
+          "bash -n *"
+        ]
+      },
+      {
+        "capability": "shell",
+        "effect": "deny",
+        "match": [
+          "git push --force*",
+          "git push -f*",
+          "git push * main*",
+          "git push * master*",
+          "git reset --hard*",
+          "git clean -f*",
+          "gh pr merge*",
+          "rm -rf *",
+          "sudo *",
+          "terraform apply*",
+          "terraform destroy*",
+          "kubectl *"
+        ]
+      },
+      {
+        "capability": "skill",
+        "effect": "allow"
+      },
+      {
+        "capability": "subagent",
+        "effect": "allow",
+        "match": [
+          "aws-specialist"
+        ]
+      }
+    ]
+  }
+}

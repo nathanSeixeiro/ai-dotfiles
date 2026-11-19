@@ -1,0 +1,10 @@
+{
+  "autocomplete.disable": true,
+  "chat.statusLine.tui": {
+    "credits": true,
+    "usage": true
+  },
+  "chat.terminalTitle": true,
+  "chat.agentEngine": "v3",
+  "chat.defaultAgent": "devops-lead"
+}

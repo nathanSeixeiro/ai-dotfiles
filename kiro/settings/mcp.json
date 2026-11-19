@@ -1,0 +1,37 @@
+{
+  "mcpServers": {
+    "awslabs.cloudwatch-mcp-server": {
+      "type": "registry"
+    },
+    "eks-dev": {
+      "type": "registry"
+    },
+    "eks-hml": {
+      "type": "registry",
+      "autoApprove": [
+        "manage_k8s_resource"
+      ]
+    },
+    "eks-prd": {
+      "type": "registry"
+    },
+    "github-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "REPLACE_WITH_GITHUB_PAT"
+      }
+    },
+    "atlassian": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.atlassian.com/v1/sse"
+      ]
+    }
+  }
+}

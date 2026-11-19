@@ -1,0 +1,178 @@
+{
+  "name": "devops-agent",
+  "description": "DevOps agent (MyOrg) for Kiro Crew on Windows — EKS/AKS, Terraform, GitOps, GitHub. Read-first. gh runs on Windows; az/terraform/kubectl run in WSL.",
+  "model": "auto",
+  "prompt": "# devops-agent\n\nYou are a DevOps/SRE operational specialist for my-org. Focus on operational support (debug, logs, troubleshooting, deploy, GitOps, Terraform plan/validate), NOT code architecture. Most apps are .NET — you help diagnose and operate, you are not the developer.\n\nStyle: caveman-mode (short, direct, code over prose). End every task with 1-2 lines: what was skipped, what was not checked, risk.\n\n## Tooling (this machine: Windows + Kiro Crew)\n\n- `gh` runs on **Windows** directly. Use it for GitHub writes (push, PR, branch, workflow run).\n- `kubectl`, `az`, `terraform`, `aws` run in **WSL**. Call them as `wsl bash -lc \"<cmd>\"`.\n- Repo clones may live on Windows or WSL — either is fine. Prefer a path you can reach from both (`\\\\wsl.localhost\\...` or a Windows path).\n\n## Kubernetes\n- EKS reads: `kubectl --context <cluster>` in WSL. Contexts: `eks-dev`, `eks-hml`, `eks-prod`.\n- AKS: `kubectl --context <cluster>` in WSL. Contexts: `aks-dvp`, `aks-hml`, `aks-prd`.\n- NEVER mutate prd (`aks-prd`, `eks-prod`): read-only. For a prd change, hand the exact command to the user.\n- No `kubectl delete` anywhere via the agent.\n\n## GitHub\n- Reads and writes via `gh` on Windows. Every PR needs labels (see work-rules steering).\n- Branch from up-to-date main. Check real PR state with `gh pr view` before commenting.\n- Commit co-author trailer per work-rules. Never push to main/master.\n\n## Terraform\n- WSL only: `terraform init -backend=false` then `terraform validate`. NEVER `apply`/`destroy` locally — CI/CD only.\n\n## Secrets\n- Never print secret values. `az keyvault secret list` (keys only) is fine; avoid dumping values.\n\n## Reference\n- Full onboarding (Dockerfile, KV, GitOps, CI/CD) is in the `app-onboarding` steering doc.\n- Clusters/ECR/ACR/DNS tables are in `work-rules` and `app-onboarding`.\n",
+  "tools": [
+    "code",
+    "glob",
+    "grep",
+    "introspect",
+    "read",
+    "shell",
+    "web",
+    "web_fetch",
+    "web_search",
+    "write"
+  ],
+  "allowedTools": [
+    "fs_read",
+    "grep",
+    "glob",
+    "web_fetch",
+    "web_search",
+    "introspect"
+  ],
+  "resources": [
+    "file:///C:/Users/<WINUSER>/.kiro/steering/caveman-mode.md",
+    "file:///C:/Users/<WINUSER>/.kiro/steering/work-rules.md",
+    "file:///C:/Users/<WINUSER>/.kiro/steering/app-onboarding.md"
+  ],
+  "toolsSettings": {
+    "execute_bash": {
+      "autoAllowReadonly": true,
+      "allowedCommands": [
+        "gh (pr|issue|repo|run|workflow|api|auth) .*",
+        "wsl bash -lc \"kubectl --context (eks-dev|eks-hml|eks-prod|aks-dvp|aks-hml|aks-prd|kind-clt) .*",
+        "wsl bash -lc \"(terraform init|terraform validate|terraform plan|terraform fmt) .*",
+        "wsl bash -lc \"(az login|az account|az keyvault secret list|az keyvault secret show) .*",
+        "wsl bash -lc \"(aws sso login|aws sts get-caller-identity).*",
+        "wsl bash -lc \"(grep|find|head|tail|cat|less|wc|ls|tree|file|stat|du|df|which|echo|pwd|sort|uniq|awk|sed|diff|jq|yq|mkdir|sleep|python3|base64|xxd|curl) .*",
+        "(findstr|type|dir|where|git) .*",
+        "git (status|log|diff|branch|remote|show|add|commit|push|pull|stash|fetch|rebase|checkout|switch) .*"
+      ],
+      "deniedCommands": [
+        ".*terraform (apply|destroy).*",
+        ".*kubectl.*\\bdelete\\b.*",
+        ".*rm -rf.*",
+        ".*sudo .*",
+        ".*git push (-f|--force).*",
+        ".*git reset --hard.*",
+        ".*git clean -f.*"
+      ]
+    }
+  },
+  "includeMcpJson": false,
+  "permissions": {
+    "rules": [
+      {
+        "capability": "shell",
+        "match": [
+          "gh pr *",
+          "gh issue *",
+          "gh repo *",
+          "gh run *",
+          "gh workflow *",
+          "gh api *",
+          "gh auth *",
+          "wsl bash -lc \"kubectl --context eks-dev *",
+          "wsl bash -lc \"kubectl --context eks-hml *",
+          "wsl bash -lc \"kubectl --context eks-prod *",
+          "wsl bash -lc \"kubectl --context aks-dvp *",
+          "wsl bash -lc \"kubectl --context aks-hml *",
+          "wsl bash -lc \"kubectl --context aks-prd *",
+          "wsl bash -lc \"kubectl --context kind-clt *",
+          "wsl bash -lc \"terraform init *",
+          "wsl bash -lc \"terraform validate *",
+          "wsl bash -lc \"terraform plan *",
+          "wsl bash -lc \"terraform fmt *",
+          "wsl bash -lc \"az login *",
+          "wsl bash -lc \"az account *",
+          "wsl bash -lc \"az keyvault secret list *",
+          "wsl bash -lc \"az keyvault secret show *",
+          "wsl bash -lc \"aws sso login*",
+          "wsl bash -lc \"aws sts get-caller-identity*",
+          "wsl bash -lc \"grep *",
+          "wsl bash -lc \"find *",
+          "wsl bash -lc \"head *",
+          "wsl bash -lc \"tail *",
+          "wsl bash -lc \"cat *",
+          "wsl bash -lc \"less *",
+          "wsl bash -lc \"wc *",
+          "wsl bash -lc \"ls *",
+          "wsl bash -lc \"tree *",
+          "wsl bash -lc \"file *",
+          "wsl bash -lc \"stat *",
+          "wsl bash -lc \"du *",
+          "wsl bash -lc \"df *",
+          "wsl bash -lc \"which *",
+          "wsl bash -lc \"echo *",
+          "wsl bash -lc \"pwd *",
+          "wsl bash -lc \"sort *",
+          "wsl bash -lc \"uniq *",
+          "wsl bash -lc \"awk *",
+          "wsl bash -lc \"sed *",
+          "wsl bash -lc \"diff *",
+          "wsl bash -lc \"jq *",
+          "wsl bash -lc \"yq *",
+          "wsl bash -lc \"mkdir *",
+          "wsl bash -lc \"sleep *",
+          "wsl bash -lc \"python3 *",
+          "wsl bash -lc \"base64 *",
+          "wsl bash -lc \"xxd *",
+          "wsl bash -lc \"curl *",
+          "findstr *",
+          "type *",
+          "dir *",
+          "where *",
+          "git *",
+          "git status *",
+          "git log *",
+          "git diff *",
+          "git branch *",
+          "git remote *",
+          "git show *",
+          "git add *",
+          "git commit *",
+          "git push *",
+          "git pull *",
+          "git stash *",
+          "git fetch *",
+          "git rebase *",
+          "git checkout *",
+          "git switch *"
+        ],
+        "effect": "allow"
+      },
+      {
+        "capability": "shell",
+        "match": [
+          "*terraform apply*",
+          "*terraform destroy*",
+          "*kubectl*delete*",
+          "*rm -rf*",
+          "*sudo *",
+          "*git push -f*",
+          "*git push --force*",
+          "*git reset --hard*",
+          "*git clean -f*"
+        ],
+        "effect": "deny"
+      },
+      {
+        "capability": "fs_read",
+        "effect": "allow"
+      },
+      {
+        "capability": "web_fetch",
+        "effect": "allow"
+      },
+      {
+        "capability": "web_search",
+        "effect": "allow"
+      },
+      {
+        "capability": "skill",
+        "effect": "allow"
+      }
+    ],
+    "policies": [
+      "read-only-shell"
+    ]
+  },
+  "kiroUpgrade": {
+    "revision": 3,
+    "fingerprint": "sha256:f595409b319d1ee7314118aedb06903583a7cfca61e7a18fce059fe0ca9a6ac2",
+    "source": "sha256:3b37005391dfa4916499483de63390253513a35a3459383eb9509dafb6e698c3"
+  }
+}

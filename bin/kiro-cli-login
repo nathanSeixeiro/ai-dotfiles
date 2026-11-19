@@ -1,0 +1,49 @@
+#!/bin/bash
+# kiro-cli-login: Faz login no Kiro CLI via Windows (redirect flow) e copia o token para o WSL
+# Instale no WSL: cp /mnt/c/Users/sn1091308/kiro-cli-login.sh ~/bin/kiro-cli-login && chmod +x ~/bin/kiro-cli-login
+
+set -e
+
+WINDOWS_USER="sn1091308"
+WIN_SSO_CACHE="/mnt/c/Users/${WINDOWS_USER}/.aws/sso/cache"
+WIN_KIRO_DATA="/mnt/c/Users/${WINDOWS_USER}/AppData/Local/Kiro-Cli"
+LINUX_SSO_CACHE="$HOME/.aws/sso/cache"
+LINUX_KIRO_DATA="$HOME/.local/share/kiro-cli"
+
+echo "🔐 Iniciando login do Kiro CLI via Windows..."
+echo ""
+
+# Executa o login no Windows (usa redirect flow, que funciona)
+/mnt/c/Users/${WINDOWS_USER}/AppData/Local/Kiro-Cli/kiro-cli.exe login
+
+if [ $? -ne 0 ]; then
+    echo "❌ Login falhou no Windows."
+    exit 1
+fi
+
+echo ""
+echo "✅ Login no Windows concluído. Copiando credenciais para o WSL..."
+
+# Copia token SSO
+mkdir -p "$LINUX_SSO_CACHE"
+if [ -f "$WIN_SSO_CACHE/kiro-auth-token.json" ]; then
+    cp "$WIN_SSO_CACHE/kiro-auth-token.json" "$LINUX_SSO_CACHE/"
+    echo "  ✓ Token SSO copiado"
+else
+    echo "  ⚠ Token SSO não encontrado em $WIN_SSO_CACHE"
+fi
+
+# Copia banco de dados (contém sessão)
+mkdir -p "$LINUX_KIRO_DATA"
+if [ -f "$WIN_KIRO_DATA/data.sqlite3" ]; then
+    cp "$WIN_KIRO_DATA/data.sqlite3" "$LINUX_KIRO_DATA/"
+    echo "  ✓ Banco de dados copiado"
+else
+    echo "  ⚠ Banco de dados não encontrado em $WIN_KIRO_DATA"
+fi
+
+echo ""
+echo "🎉 Pronto! Verificando login no WSL..."
+echo ""
+
+kiro-cli whoami

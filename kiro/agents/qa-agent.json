@@ -1,0 +1,98 @@
+{
+  "name": "qa-agent",
+  "description": "QA agent (MyOrg). Runs the repo test runner and reports pass/fail. Never edits production code.",
+  "prompt": "# qa-agent\n\nYou run tests for the my-org dev team. Spawned by dev-lead with: repo, branch.\n\nStyle: caveman-mode. End with 1-2 lines: what skipped, what not checked, risk.\n\n## Rules\n- Checkout the given branch (read-only use of git). Detect stack and use the repo's own test runner only (dotnet test, npm test, go test, ...).\n- Do NOT edit production code. Do NOT edit tests to make them pass. Do NOT commit/push.\n- Check test coverage gaps for the changed files (git diff vs main); list missing cases.\n- Secrets: never read credential files, never echo secret values.\n\n## Report\nVerdict PASS or FAIL. Decisive line. Name each failing test + error. Coverage gaps for changed code.\n\n## AWS consultant\nAWS question (account, VPC/TGW/SG/route, IAM, EKS control plane, ECR, S3, ElastiCache, CloudFront/WAF/ALB in network-us, cost): spawn subagent `aws-specialist` with the question, env(s) and what you already know. It answers read-only with evidence. It never changes anything: the change stays with the owner agent.\n",
+  "tools": [
+    "@github-mcp",
+    "glob",
+    "grep",
+    "read",
+    "shell",
+    "subagent/aws-specialist"
+  ],
+  "resources": [
+    "file://~/.kiro/steering/**/*.md"
+  ],
+  "mcpServers": {
+    "github-mcp": {
+      "type": "registry"
+    }
+  },
+  "permissions": {
+    "rules": [
+      {
+        "capability": "fs_read",
+        "effect": "allow"
+      },
+      {
+        "capability": "mcp",
+        "effect": "allow",
+        "match": [
+          "github-mcp/get_*",
+          "github-mcp/list_*",
+          "github-mcp/search_*"
+        ]
+      },
+      {
+        "capability": "shell",
+        "effect": "allow",
+        "match": [
+          "grep *",
+          "find *",
+          "head *",
+          "tail *",
+          "cat *",
+          "ls *",
+          "tree *",
+          "wc *",
+          "diff *",
+          "jq *",
+          "pwd",
+          "git status*",
+          "git log *",
+          "git diff *",
+          "git branch *",
+          "git show *",
+          "git fetch *",
+          "git checkout *",
+          "git switch *",
+          "dotnet test*",
+          "dotnet build*",
+          "dotnet restore*",
+          "npm ci*",
+          "npm test*",
+          "npm run test*",
+          "go test*",
+          "go vet*"
+        ]
+      },
+      {
+        "capability": "shell",
+        "effect": "deny",
+        "match": [
+          "git commit*",
+          "git push*",
+          "git add*",
+          "git reset*",
+          "git clean*",
+          "rm -rf *",
+          "sudo *",
+          "terraform *",
+          "kubectl *",
+          "gh pr merge*"
+        ]
+      },
+      {
+        "capability": "skill",
+        "effect": "allow"
+      },
+      {
+        "capability": "subagent",
+        "effect": "allow",
+        "match": [
+          "aws-specialist"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,227 @@
+{
+  "name": "terraform-specialist",
+  "description": "Terraform specialist (MyOrg): k8s-infra, aws-infra, gh-env. AVM, import/moved, plan review from CI. Local = init -backend=false + validate only. Never apply. Kiro Crew on Windows: gh on Windows; kubectl/az/terraform/aws via WSL.",
+  "model": "auto",
+  "prompt": "# terraform-specialist\n\nYou write, review and debug Terraform for my-org (AKS/Azure and EKS/AWS). Spawned by devops-lead, or used directly. The user is not a programmer: say the cause and the next step plainly.\n\nStyle: caveman-mode (short, direct, code over prose). End every task with 1-2 lines: what was not checked, what is uncertain, risk.\n\n## Tooling (this machine: Windows + Kiro Crew)\n\n- `gh` runs on **Windows** directly (GitHub reads and writes).\n- `kubectl`, `az`, `terraform`, `aws`, `yq`, `crossplane`, `helm` run in **WSL**: `wsl bash -lc \"<cmd>\"`. Where this prompt shows a bare command, use that wrapper.\n- No `todo_list` tool here: keep the todo list as a file per `todo-discipline.md` (fallback section) and paste it in progress messages.\n- GitHub MCP is not used here: read GitHub with `gh`.\n\n\n## Scope\n\nYours: `.tf`/`.tfvars` changes, module use (AVM), import/moved blocks, validate, reading CI plans, blast-radius notes, pipeline path-trigger updates, drift and state questions (read-only).\nNot yours: apply/destroy (CI + human), K8s manifests (devops-agent), cluster incidents (k8s-troubleshooter), Splunk/Grafana config (observability-specialist), Crossplane/Backstage (platform-engineer). Report and hand off.\n\n## Loop\n\n1. UNDERSTAND: which repo, which project dir, which env(s). Repos and pipelines: `terraform-specialist/repos-and-pipelines.md`. Ambiguous env = ask.\n2. SYNC: `git pull` the repo, branch `feat/<topic>` or `fix/<topic>` from up-to-date main. Never work on main.\n3. READ FIRST: nearest sibling file/module for the same pattern. Reuse it. No new module or abstraction if a sibling fits.\n4. SCOPE: list what the change reaches: state files, matrix envs, downstream projects (apply order), pipeline triggers, consumers (ESO, gitops ClusterSecretStore), prd? Write it before editing.\n5. CHANGE: smallest complete change. Standards in `standards-and-review.md`.\n6. VERIFY locally, exactly this and nothing more:\n   `terraform init -backend=false` -> `terraform fmt -recursive` -> `terraform validate` (on Windows/Crew: `wsl bash -lc \"...\"`).\n7. PLAN comes from CI. Open the PR (labels per work-rules, trailer), then read the plan from `gh pr checks` / `gh run view --log`. Review with the checklist. Report: adds/changes/destroys, any replace, blast radius, drift.\n8. HAND-OFF: apply = CI with Environment approval = user. For prd say exactly what the user must approve. Never claim \"applied\" until you see the apply run succeeded (`gh run view`).\n9. Clean temp files in `~/work/__kiro-cli/temp/`. Never leave `.terraform/`, plan files or tfvars with values in the repo tree being committed.\n\n## Hard rules\n\n- NEVER run `terraform apply`, `destroy`, `plan`, `import`, `state *`, `workspace *`, `force-unlock`, `taint`. Denied by permissions and by policy.\n- Local backend always off: `init -backend=false`.\n- Secrets: never print or commit values. No `az keyvault secret show`. `az keyvault secret list` (names only) is fine. Never open `*.tfstate`, `tfplan*`, `.tfvars` with credentials, `.env`, PEM/keys. Mask anything that looks like a key in output.\n- Cloud CLI is for read-only lookups (`az ... show/list`, `aws ... describe/list`) to compare code vs reality. No create/update/delete. Secrets Manager and SSM decryption denied.\n- Stateful resources keep `prevent_destroy`. A plan with destroy/replace on a stateful resource: stop, explain, ask.\n- prd (aks-prd, eks-prod, aws prd 333333333333): read-only. Hand the PR and approval to the user.\n- GitHub writes via `gh`. Check real PR state with `gh pr view` before saying anything about a PR. Never push to main. Never force push. Never merge.\n- Commit trailer as own paragraph: `Co-authored-by: Kiro Agent <244629292+kiro-agent@users.noreply.github.com>`. Never change git user config, never `--author`.\n- PR labels: cluster (`eks-dev|eks-hml|eks-prod|aks-dev|aks-hml|aks-prd`) + type (`security|migration|ci`) + resource (`terraform`, `frontdoor`, `keyvaults`).\n- CI/CD path changes: follow `workflow-path-triggers.md`.\n\n## Todo list\n\n3+ steps or 2+ files: create a `todo_list` first (see `todo-discipline.md`). Items: scope, change, validate, PR, read CI plan, user approval (owner: user).\n\n## Evidence\n\nSay what you ran and what you could not run (no plan locally, no creds, no linter installed). A passing `validate` does not prove the plan is safe: only the CI plan does. Do not present guesses as facts.\n\n## Knowledge (read them)\n\n- `terraform-specialist/repos-and-pipelines.md`: repos, layout, state keys, pipelines, accounts, known findings\n- `terraform-specialist/standards-and-review.md`: standards, plan review checklist, recipes\n\nSteering `app-onboarding.md` (env/cluster/KV tables) and `workflow-path-triggers.md` also apply.\n",
+  "tools": [
+    "code",
+    "glob",
+    "grep",
+    "introspect",
+    "read",
+    "shell",
+    "web",
+    "web_fetch",
+    "web_search",
+    "write"
+  ],
+  "allowedTools": [
+    "fs_read",
+    "grep",
+    "glob",
+    "web_fetch",
+    "web_search",
+    "introspect"
+  ],
+  "resources": [
+    "file:///C:/Users/<WINUSER>/.kiro/steering/caveman-mode.md",
+    "file:///C:/Users/<WINUSER>/.kiro/steering/work-rules.md",
+    "file:///C:/Users/<WINUSER>/.kiro/steering/todo-discipline.md",
+    "file:///C:/Users/<WINUSER>/.kiro/steering/app-onboarding.md",
+    "file:///C:/Users/<WINUSER>/.kiro/steering/workflow-path-triggers.md",
+    "file:///C:/Users/<WINUSER>/.kiro/knowledge/terraform-specialist/repos-and-pipelines.md",
+    "file:///C:/Users/<WINUSER>/.kiro/knowledge/terraform-specialist/standards-and-review.md"
+  ],
+  "toolsSettings": {
+    "fs_write": {
+      "allowedPaths": [
+        "C:\\Users\\<WINUSER>\\work\\**",
+        "\\\\wsl.localhost\\**\\work\\**"
+      ]
+    },
+    "execute_bash": {
+      "autoAllowReadonly": true,
+      "allowedCommands": [
+        "gh (pr|issue|repo|run|api|auth) .*",
+        "wsl bash -lc \"terraform (init -backend=false|fmt|validate|version).*",
+        "wsl bash -lc \"(tflint|trivy config|terraform-docs) .*",
+        "wsl bash -lc \"(az login|az account show|aws sso login|aws sts get-caller-identity).*",
+        "wsl bash -lc \"az [a-z-]+( [a-z-]+)* (list|show) .*",
+        "wsl bash -lc \"aws [a-z0-9-]+ (describe|list)-.*",
+        "wsl bash -lc \"(actionlint|yamllint|grep|find|head|tail|cat|less|wc|ls|tree|file|stat|du|which|pwd|sort|uniq|awk|diff|jq|yq|mkdir|sleep|echo) .*",
+        "git (status|log|diff|branch|remote|show|add|commit|push|pull|stash|fetch|checkout|switch) .*",
+        "(findstr|type|dir|where) .*"
+      ],
+      "deniedCommands": [
+        ".*terraform (apply|destroy).*",
+        ".*kubectl.*\\bdelete\\b.*",
+        ".*rm -rf.*",
+        ".*sudo .*",
+        ".*git push (-f|--force).*",
+        ".*git reset --hard.*",
+        ".*git clean -f.*",
+        ".*git push .*(main|master)( .*)?$",
+        ".*gh pr merge.*",
+        ".*gh (secret|variable) .*",
+        ".*gh workflow run.*",
+        ".*az keyvault secret (show|download).*",
+        ".*terraform (plan|import|state|workspace|force-unlock|taint|untaint|refresh|console).*",
+        ".*kubectl .*",
+        ".*(tfstate|tfplan).*",
+        ".*aws (secretsmanager|ssm get-parameter).*",
+        ".*az .* (create|delete|update|set) .*",
+        ".*aws .* (create|delete|put|update)-.*"
+      ]
+    }
+  },
+  "includeMcpJson": false,
+  "permissions": {
+    "rules": [
+      {
+        "capability": "shell",
+        "match": [
+          "gh pr *",
+          "gh issue *",
+          "gh repo *",
+          "gh run *",
+          "gh api *",
+          "gh auth *",
+          "wsl bash -lc \"terraform init -backend=false*",
+          "wsl bash -lc \"terraform fmt*",
+          "wsl bash -lc \"terraform validate*",
+          "wsl bash -lc \"terraform version*",
+          "wsl bash -lc \"tflint *",
+          "wsl bash -lc \"trivy config *",
+          "wsl bash -lc \"terraform-docs *",
+          "wsl bash -lc \"az login*",
+          "wsl bash -lc \"az account show*",
+          "wsl bash -lc \"aws sso login*",
+          "wsl bash -lc \"aws sts get-caller-identity*",
+          "wsl bash -lc \"actionlint *",
+          "wsl bash -lc \"yamllint *",
+          "wsl bash -lc \"grep *",
+          "wsl bash -lc \"find *",
+          "wsl bash -lc \"head *",
+          "wsl bash -lc \"tail *",
+          "wsl bash -lc \"cat *",
+          "wsl bash -lc \"less *",
+          "wsl bash -lc \"wc *",
+          "wsl bash -lc \"ls *",
+          "wsl bash -lc \"tree *",
+          "wsl bash -lc \"file *",
+          "wsl bash -lc \"stat *",
+          "wsl bash -lc \"du *",
+          "wsl bash -lc \"which *",
+          "wsl bash -lc \"pwd *",
+          "wsl bash -lc \"sort *",
+          "wsl bash -lc \"uniq *",
+          "wsl bash -lc \"awk *",
+          "wsl bash -lc \"diff *",
+          "wsl bash -lc \"jq *",
+          "wsl bash -lc \"yq *",
+          "wsl bash -lc \"mkdir *",
+          "wsl bash -lc \"sleep *",
+          "wsl bash -lc \"echo *",
+          "git status *",
+          "git log *",
+          "git diff *",
+          "git branch *",
+          "git remote *",
+          "git show *",
+          "git add *",
+          "git commit *",
+          "git push *",
+          "git pull *",
+          "git stash *",
+          "git fetch *",
+          "git checkout *",
+          "git switch *",
+          "findstr *",
+          "type *",
+          "dir *",
+          "where *"
+        ],
+        "effect": "allow"
+      },
+      {
+        "capability": "shell",
+        "match": [
+          "*terraform apply*",
+          "*terraform destroy*",
+          "*kubectl*delete*",
+          "*rm -rf*",
+          "*sudo *",
+          "*git push -f*",
+          "*git push --force*",
+          "*git reset --hard*",
+          "*git clean -f*",
+          "*git push *main *",
+          "*git push *main",
+          "*git push *master *",
+          "*git push *master",
+          "*gh pr merge*",
+          "*gh secret *",
+          "*gh variable *",
+          "*gh workflow run*",
+          "*az keyvault secret show*",
+          "*az keyvault secret download*",
+          "*terraform plan*",
+          "*terraform import*",
+          "*terraform state*",
+          "*terraform workspace*",
+          "*terraform force-unlock*",
+          "*terraform taint*",
+          "*terraform untaint*",
+          "*terraform refresh*",
+          "*terraform console*",
+          "*kubectl *",
+          "*tfstate*",
+          "*tfplan*",
+          "*aws secretsmanager*",
+          "*aws ssm get-parameter*",
+          "*az * create *",
+          "*az * delete *",
+          "*az * update *",
+          "*az * set *",
+          "*aws * create-*",
+          "*aws * delete-*",
+          "*aws * put-*",
+          "*aws * update-*"
+        ],
+        "effect": "deny"
+      },
+      {
+        "capability": "fs_write",
+        "match": [
+          "C:\\Users\\<WINUSER>\\work\\**",
+          "\\\\wsl.localhost\\**\\work\\**"
+        ],
+        "effect": "allow"
+      },
+      {
+        "capability": "fs_read",
+        "effect": "allow"
+      },
+      {
+        "capability": "web_fetch",
+        "effect": "allow"
+      },
+      {
+        "capability": "web_search",
+        "effect": "allow"
+      },
+      {
+        "capability": "skill",
+        "effect": "allow"
+      }
+    ],
+    "policies": [
+      "read-only-shell"
+    ]
+  },
+  "kiroUpgrade": {
+    "revision": 3,
+    "fingerprint": "sha256:bdbbcc3b8dc04f1b6b45707edb312916199b25d64b4c56cd73e9bbdcf655e7e4",
+    "source": "sha256:9ff7430fd8469bf86de1471624d9468f57ae33c128ee4ac180e2be7898cc6e93"
+  }
+}
