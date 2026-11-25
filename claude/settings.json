@@ -1,4 +1,27 @@
 {
+  "model": "claude-sonnet-5[1m]",
+  "enabledPlugins": {
+    "habblaud@habblaud": true,
+    "habblaud-permissoes@habblaud": true,
+    "habblaud-mensagens@habblaud": true,
+    "superpowers@anthropic-plugin-directory": true
+  },
+  "extraKnownMarketplaces": {
+    "habblaud": {
+      "source": {
+        "source": "directory",
+        "path": "/home/nathan/habblaud"
+      }
+    }
+  },
+  "spinnerTipsEnabled": true,
+  "modelSettings": {
+    "claude-sonnet-5": {
+      "effortLevel": "medium"
+    }
+  },
+  "theme": "auto",
+  "agent": "devops-lead",
   "hooks": {
     "PreToolUse": [
       {
@@ -42,7 +65,10 @@
     },
     "eks-dev": {
       "command": "uvx",
-      "args": ["awslabs.eks-mcp-server@latest", "--allow-sensitive-data-access"],
+      "args": [
+        "awslabs.eks-mcp-server@latest",
+        "--allow-sensitive-data-access"
+      ],
       "env": {
         "AWS_PROFILE": "development-us",
         "AWS_REGION": "us-east-1",
@@ -51,17 +77,26 @@
     },
     "eks-hml": {
       "command": "uvx",
-      "args": ["awslabs.eks-mcp-server@latest", "--allow-write", "--allow-sensitive-data-access"],
+      "args": [
+        "awslabs.eks-mcp-server@latest",
+        "--allow-write",
+        "--allow-sensitive-data-access"
+      ],
       "env": {
         "AWS_PROFILE": "homologation-us",
         "AWS_REGION": "us-east-1",
         "FASTMCP_LOG_LEVEL": "ERROR"
       },
-      "autoApprove": ["manage_k8s_resource"]
+      "autoApprove": [
+        "manage_k8s_resource"
+      ]
     },
     "eks-prd": {
       "command": "uvx",
-      "args": ["awslabs.eks-mcp-server@latest", "--allow-sensitive-data-access"],
+      "args": [
+        "awslabs.eks-mcp-server@latest",
+        "--allow-sensitive-data-access"
+      ],
       "env": {
         "AWS_PROFILE": "production-us",
         "AWS_REGION": "us-east-1",
@@ -70,14 +105,18 @@
     },
     "awslabs.aws-documentation-mcp-server": {
       "command": "uvx",
-      "args": ["awslabs.aws-documentation-mcp-server@latest"],
+      "args": [
+        "awslabs.aws-documentation-mcp-server@latest"
+      ],
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"
       }
     },
     "awslabs.aws-network-mcp-server": {
       "command": "uvx",
-      "args": ["awslabs.aws-network-mcp-server@latest"],
+      "args": [
+        "awslabs.aws-network-mcp-server@latest"
+      ],
       "env": {
         "AWS_PROFILE": "network-us",
         "AWS_REGION": "us-east-1",
@@ -86,7 +125,9 @@
     },
     "awslabs.cloudwatch-mcp-server": {
       "command": "uvx",
-      "args": ["awslabs.cloudwatch-mcp-server@latest"],
+      "args": [
+        "awslabs.cloudwatch-mcp-server@latest"
+      ],
       "env": {
         "AWS_PROFILE": "REPLACE_WITH_AWS_PROFILE",
         "FASTMCP_LOG_LEVEL": "ERROR"
@@ -101,5 +142,19 @@
       ]
     }
   },
-  "_note_mcp_prerequisites": "The eks-*/awslabs.* servers run via `uvx` (from astral's `uv`) — install it first (https://docs.astral.sh/uv/) or they'll fail with 'spawn uvx ENOENT', same as they currently do under your real Kiro config (checked ~/.kiro/logs/*/mcp.log). `awslabs.cloudwatch-mcp-server` has no single right AWS_PROFILE across dev/hml/prd in the source config — set REPLACE_WITH_AWS_PROFILE yourself. `splunk-mcp-combined` is a private/enterprise MCP server reached over HTTP in your real Kiro setup (streamable-http transport, not a public package) — no public URL exists to guess, so REPLACE_WITH_YOUR_SPLUNK_MCP_URL with your org's real endpoint before this entry will work."
+  "_note_mcp_prerequisites": "The eks-*/awslabs.* servers run via `uvx` (from astral's `uv`) \u2014 install it first (https://docs.astral.sh/uv/) or they'll fail with 'spawn uvx ENOENT', same as they currently do under your real Kiro config (checked ~/.kiro/logs/*/mcp.log). `awslabs.cloudwatch-mcp-server` has no single right AWS_PROFILE across dev/hml/prd in the source config \u2014 set REPLACE_WITH_AWS_PROFILE yourself. `splunk-mcp-combined` is a private/enterprise MCP server reached over HTTP in your real Kiro setup (streamable-http transport, not a public package) \u2014 no public URL exists to guess, so REPLACE_WITH_YOUR_SPLUNK_MCP_URL with your org's real endpoint before this entry will work.",
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://localhost:4141",
+    "ANTHROPIC_AUTH_TOKEN": "dummy",
+    "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY": "1",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-opus-5-5",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-5-5",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "claude-haiku-5-5",
+    "CLAUDE_CODE_ATTRIBUTION_HEADER": "0",
+    "DISABLE_NON_ESSENTIAL_MODEL_CALLS": "1",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION": "false",
+    "CLAUDE_CODE_AUTO_MODE_SERVER": "0",
+    "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1"
+  }
 }
