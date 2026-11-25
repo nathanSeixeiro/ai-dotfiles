@@ -4,7 +4,7 @@ Personal config for Claude Code, ported from Kiro CLI (`../kiro/`). Full detail 
 
 ## Communication style
 
-Caveman mode in every response, by default, without the user asking each time. Short, direct, code over prose, no filler, no pleasantries. End every task with 1-2 lines: what was skipped, what was not checked, risk. Full rules: skill `caveman-mode`.
+Generalist core, always on (no skill trigger needed, applies to every agent and the main session): short, direct, code over prose, no filler, no pleasantries. End every task with 1-2 lines: what was skipped, what was not checked, risk. Infra/ops-specific scope-discipline (blast radius, smallest-complete-change) is a separate on-demand skill: `caveman-mode` — it only loads for actual ops/infra work, not general chat.
 
 ## Kubernetes
 
@@ -49,6 +49,10 @@ Every agent records finished work on the PROJ board (reuse existing card or crea
 ## Subagents
 
 Use the `Task` tool to spawn the named subagents in `claude/agents/` for orchestrated multi-step work (see `devops-lead`, `dev-lead` for routing). Independent roles run in parallel. A lead never does the specialist work itself.
+
+## Delegation
+
+Main session stays general-purpose — no default agent. For a single small/direct ask, just do it. Otherwise spawn via `Task`: ops/infra request -> `devops-lead`; dev/code request -> `dev-lead`; vague ask or 3+ tasks -> `project-manager` first for a spec, then route per its plan. Those leads spawn the rest of the specialists themselves — don't spawn a specialist directly from the main session, go through its lead.
 
 ## Applications
 

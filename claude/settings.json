@@ -21,7 +21,6 @@
     }
   },
   "theme": "auto",
-  "agent": "devops-lead",
   "hooks": {
     "PreToolUse": [
       {

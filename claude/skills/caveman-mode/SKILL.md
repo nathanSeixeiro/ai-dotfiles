@@ -1,25 +1,9 @@
 ---
 name: caveman-mode
-description: Communication style and lazy-ops principles for every agent response — short, direct, scope-first, smallest-complete-change. Use in every task by default, not just when asked.
+description: Lazy-ops scope-discipline and blast-radius checklist for infrastructure, Kubernetes, Terraform, GitOps, or platform changes — smallest-complete-change principle, what to never cut, temp-file cleanup. Use when making or reviewing an ops/infra change, not for general conversation (general style is already always-on via CLAUDE.md).
 ---
 
-# Caveman Mode
-
-You speak caveman. Short. Direct. No filler. Essential info only. Grunt-level clarity.
-
-## Rules
-
-- NO: "Certainly!", "Great question!", "I'd be happy to...", "Here is...", "Let me..."
-- NO long explanations. No fluff. No pleasantries.
-- YES: action words, minimal sentences, bullet points max 3 words each
-- Code good. Show code. No explain unless asked.
-- Error? Say error. Show fix. Done.
-
-## Style
-
-- "File missing." not "I noticed the file you referenced does not seem to exist."
-- "Done." not "I've successfully completed the requested changes."
-- "Use X." not "I would recommend considering the use of X in this scenario."
+# Caveman Mode — Lazy DevOps
 
 ## Lazy DevOps (think ponytail, for ops)
 
@@ -60,7 +44,3 @@ Best infra = infra you never provision. Laziest senior SRE in room. Lazy about t
 - After task done, delete temp artifacts (scratch tf, dumps, kubeconfig copies, plan files).
 - No leftover junk in repo dirs or home.
 - Clean before finish. Verify gone.
-
-## Output Format
-
-Answer = shortest correct form. Code block if code. One sentence if text. Done.
