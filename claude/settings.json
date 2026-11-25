@@ -39,7 +39,67 @@
         "mcp-remote",
         "https://mcp.atlassian.com/v1/sse"
       ]
+    },
+    "eks-dev": {
+      "command": "uvx",
+      "args": ["awslabs.eks-mcp-server@latest", "--allow-sensitive-data-access"],
+      "env": {
+        "AWS_PROFILE": "development-us",
+        "AWS_REGION": "us-east-1",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
+    },
+    "eks-hml": {
+      "command": "uvx",
+      "args": ["awslabs.eks-mcp-server@latest", "--allow-write", "--allow-sensitive-data-access"],
+      "env": {
+        "AWS_PROFILE": "homologation-us",
+        "AWS_REGION": "us-east-1",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "autoApprove": ["manage_k8s_resource"]
+    },
+    "eks-prd": {
+      "command": "uvx",
+      "args": ["awslabs.eks-mcp-server@latest", "--allow-sensitive-data-access"],
+      "env": {
+        "AWS_PROFILE": "production-us",
+        "AWS_REGION": "us-east-1",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
+    },
+    "awslabs.aws-documentation-mcp-server": {
+      "command": "uvx",
+      "args": ["awslabs.aws-documentation-mcp-server@latest"],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
+    },
+    "awslabs.aws-network-mcp-server": {
+      "command": "uvx",
+      "args": ["awslabs.aws-network-mcp-server@latest"],
+      "env": {
+        "AWS_PROFILE": "network-us",
+        "AWS_REGION": "us-east-1",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
+    },
+    "awslabs.cloudwatch-mcp-server": {
+      "command": "uvx",
+      "args": ["awslabs.cloudwatch-mcp-server@latest"],
+      "env": {
+        "AWS_PROFILE": "REPLACE_WITH_AWS_PROFILE",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
+    },
+    "splunk-mcp-combined": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "REPLACE_WITH_YOUR_SPLUNK_MCP_URL"
+      ]
     }
   },
-  "_note_mcp_no_direct_port": "Several agent tool lists above reference MCP servers with no known Claude Code equivalent to port automatically: eks-dev, eks-hml, eks-prd (Kiro CLI registry EKS MCP servers), awslabs.cloudwatch-mcp-server, awslabs.aws-documentation-mcp-server, awslabs.aws-network-mcp-server, splunk-mcp-combined. Configure your own MCP server entries for these (or remove the corresponding mcp__<name>__* tools from the affected agent frontmatter) before relying on them."
+  "_note_mcp_prerequisites": "The eks-*/awslabs.* servers run via `uvx` (from astral's `uv`) — install it first (https://docs.astral.sh/uv/) or they'll fail with 'spawn uvx ENOENT', same as they currently do under your real Kiro config (checked ~/.kiro/logs/*/mcp.log). `awslabs.cloudwatch-mcp-server` has no single right AWS_PROFILE across dev/hml/prd in the source config — set REPLACE_WITH_AWS_PROFILE yourself. `splunk-mcp-combined` is a private/enterprise MCP server reached over HTTP in your real Kiro setup (streamable-http transport, not a public package) — no public URL exists to guess, so REPLACE_WITH_YOUR_SPLUNK_MCP_URL with your org's real endpoint before this entry will work."
 }

@@ -8,4 +8,6 @@ tools: Read, Write, Bash, WebFetch, WebSearch, mcp__github-mcp__*, mcp__awslabs.
 
 DevOps agent for my-org. Follow the steering files.
 
+Style: caveman-mode (short, direct, code over prose). End every task with 1-2 lines: what was skipped, what was not checked, risk.
+
 Relevant skills: work-rules, caveman-mode, workflow-path-triggers, app-onboarding.
