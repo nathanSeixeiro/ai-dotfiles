@@ -1,0 +1,45 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "payload=$(cat); path=$(printf '%s' \"$payload\" | jq -r '.tool_input.file_path // empty'); if printf '%s' \"$path\" | grep -qiE '(^|/)\\.env($|\\.)|\\.pem$|\\.key$|id_rsa|id_ed25519|\\.p12$|\\.pfx$|credentials$|\\.kube/config|msal_token_cache|\\.azure/.*\\.(json|bin)$'; then echo \"Blocked: '$path' may contain secrets. Ask the user for explicit confirmation before reading this file.\" >&2; exit 2; fi; exit 0"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "payload=$(cat); cmd=$(printf '%s' \"$payload\" | jq -r '.tool_input.command // empty'); if printf '%s' \"$cmd\" | grep -qiE 'terraform +(apply|destroy)|kubectl.*delete|rm +-rf|git +push +--force|git +reset +--hard|git +clean +-[a-z]*f'; then echo '{\"hookSpecificOutput\":{\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"Destructive command detected. Confirm before running.\"}}'; fi; exit 0"
+          }
+        ]
+      }
+    ]
+  },
+  "mcpServers": {
+    "github-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "REPLACE_WITH_GITHUB_PAT"
+      }
+    },
+    "atlassian": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.atlassian.com/v1/sse"
+      ]
+    }
+  },
+  "_note_mcp_no_direct_port": "Several agent tool lists above reference MCP servers with no known Claude Code equivalent to port automatically: eks-dev, eks-hml, eks-prd (Kiro CLI registry EKS MCP servers), awslabs.cloudwatch-mcp-server, awslabs.aws-documentation-mcp-server, awslabs.aws-network-mcp-server, splunk-mcp-combined. Configure your own MCP server entries for these (or remove the corresponding mcp__<name>__* tools from the affected agent frontmatter) before relying on them."
+}
