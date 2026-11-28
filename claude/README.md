@@ -1,78 +1,91 @@
-# Claude Code personal config — architecture
+# Claude Code configuration
 
-Overview of how `CLAUDE.md`, `agents/`, and `skills/` fit together in this config.
+Personal Claude Code setup. Hierarchical overview: models → instructions → agents → skills → settings.
 
-## Layers
+## 1. Models
 
-1. **`CLAUDE.md`** — always-loaded summary: communication style, Kubernetes/GitHub/Terraform defaults, production-safety rules, secrets handling, and the entry point into the agent system (`## Subagents`).
-2. **`agents/`** — named subagent definitions, spawned via the `Task`/`Agent` tool for orchestrated multi-step work.
-3. **`skills/`** — on-demand instruction sets, loaded by description match or invoked explicitly (`Skill` tool). Apply to the main session and to any agent.
+| Alias | Model ID | Used by |
+|---|---|---|
+| `opus` | `claude-opus-5-5` | `ANTHROPIC_DEFAULT_OPUS_MODEL` |
+| `sonnet` | `claude-sonnet-5-5` | `ANTHROPIC_DEFAULT_SONNET_MODEL` |
+| `haiku` | `claude-haiku-5-5` | `ANTHROPIC_DEFAULT_HAIKU_MODEL`, default session model (`settings.json` → `model`) |
 
-Routing rule: for a single small/direct ask, just do it inline — no agent needed. Otherwise:
-- dev/code request → `dev-lead`
-- ops/infra request → `devops-lead`
-- vague ask or 3+ tasks → `project-manager` first for a spec, then route per its plan
+- Default session model: `haiku`, effort `low` (`settings.json` → `modelSettings`).
+- Agent models are set per agent in frontmatter (`model:` / `effort:`). Currently `qa-agent` and `rules-validator` run on `haiku` with `low` effort. All others inherit the session model.
+- Model IDs must match exactly (`claude-sonnet-5-5`, not `claude-sonnet-5`) or `modelSettings` silently does nothing.
 
-Leads orchestrate; they never do the specialist work themselves. Don't spawn a specialist directly — go through its lead, except when using a specialist standalone for a quick one-off (documented per-agent below).
+## 2. Instruction layers
 
-## Agent roster
+1. `CLAUDE.md` — always loaded. Communication style, Kubernetes/GitHub/Terraform defaults, production-safety rules, secrets handling, subagent entry point.
+2. `agents/` — named subagents, spawned for orchestrated multi-step work.
+3. `skills/` — on-demand instruction sets, loaded by description match or invoked explicitly.
 
-### Dev team
+Rule of thumb: a single small or direct request is done inline. Multi-step work goes through a lead.
 
-| Agent | Role | Spawned by | Can write code? | Can merge/push main? |
-|---|---|---|---|---|
-| `dev-lead` | Tech lead — breaks features into tasks, spawns dev/qa/review/validate/project-manager, runs the gate, delivers | user | no (orchestrates only) | no |
-| `dev-agent` | Implements code + unit tests on a feature branch | dev-lead | yes | no |
-| `idp-dev` | Senior dev for internal-platform/portal code (plugins, backend modules, scaffolder-style actions, infra-automation functions). Thinks before typing — contracts are expensive to get wrong | dev-lead | yes | no |
-| `qa-agent` | Runs the repo's own test runner, reports pass/fail + coverage gaps | dev-lead | no (tests only) | no |
-| `rules-validator` | Read-only audit of a branch/PR against hard rules (build, trailer, scope, secrets) — PASS/FAIL verdict | dev-lead | no | no |
-| `project-manager` | Generic spec-writer/requirements analyst — turns requests into specs with acceptance criteria and task breakdowns; tracks status | dev-lead, devops-lead, or user directly | no | no |
+## 3. Agents
 
-Gate loop (`dev-lead`): dev-agent implements → qa-agent + `code-review` skill run in parallel on the diff → rules-validator audits → all green → PR opened (never merged) → delivered to user. Acceptance = rules-validator's verdict, not a subagent's claim.
+### 3.1 Routing
 
-### DevOps team
+- Development request → `dev-lead`
+- Ops/infra request → `devops-lead`
+- Vague request or 3+ tasks → `project-manager` first (spec), then route per its plan
 
-| Agent | Role | Spawned by | Can write code? | Can touch prod? |
-|---|---|---|---|---|
-| `devops-lead` | Tech lead — routes ops requests to the right specialist, runs the gate, delivers | user | no (orchestrates only) | no |
-| `devops-agent` | General ops: CI/CD, pipelines, Dockerfiles, GitOps manifests, GitHub ops, debug/logs | devops-lead | yes (config/IaC) | no |
-| `terraform-specialist` | Terraform: modules, import/moved, validate. Plan review comes from CI, never local apply | devops-lead | yes (`.tf` only) | no — read-only, hands PR to user |
-| `k8s-troubleshooter` | Investigates cluster incidents: evidence-first RCA, fix via PR, never `kubectl edit/patch` on GitOps-managed resources | devops-lead | no (diagnosis + PR) | no — read-only |
-| `platform-engineer` | Designs the internal developer platform (portal + infra-automation + GitOps): golden paths, templates, schemas. Hands code work to `idp-dev` via dev-lead | devops-lead | no (YAML/design only) | no |
+Leads orchestrate and never do specialist work themselves.
 
-Routing (`devops-lead`): vague/large request → project-manager first; `.tf` work → terraform-specialist; CI/CD/GitOps/Dockerfiles → devops-agent; cluster incident → k8s-troubleshooter; self-service/golden-path design → platform-engineer; anything needing application code → hand off to dev-lead.
+### 3.2 Development team
 
-### Cross-team
+- `dev-lead` — breaks features into tasks, spawns workers, runs the gate, delivers. Does not write code.
+  - `dev-agent` — implements code and unit tests on `feat/*` or `fix/*`.
+  - `idp-dev` — internal-platform code (plugins, modules, actions, automation functions).
+  - `qa-agent` — runs the repo's test runner, reports pass/fail. (haiku, low)
+  - `rules-validator` — read-only PASS/FAIL audit against hard rules. (haiku, low)
+  - `project-manager` — writes specs with acceptance criteria; tracks status.
 
-- A dev issue found during ops work becomes a task for `dev-lead`.
-- Ops work needed by the dev team (e.g. a new pipeline) is built by the devops team.
-- `idp-dev` and `platform-engineer` split by design-vs-code: platform-engineer designs (YAML/schema), idp-dev implements (code), both flow through their respective leads.
+Gate loop: dev-agent implements → qa-agent and the `code-review` skill run on the diff → rules-validator audits → PR opened. Never merged by an agent.
 
-## Hard rules shared across all agents
+### 3.3 DevOps team
 
-- Never merge, never push to main/master, never force-push. Feature branches only (`feat/*`, `fix/*`), branched from up-to-date main.
-- Never change `git user.name`/`user.email`, never `--author`. Commit trailer per the session's attribution instructions.
-- GitHub writes via `gh` CLI. Always verify real PR/run state (`gh pr view`, `gh run view`) before claiming anything about it — never trust a cached assumption.
-- Terraform locally: `init -backend=false` + `validate` only. Apply/destroy/plan is CI-only, or explicit human-run with confirmation.
-- Production (or anything that looks like it): read-only by default. Any prod/DNS/destructive op needs explicit user sign-off — hand them the exact command.
-- Secrets: never print/echo/log/commit values, never read `.env`/PEM/credential files unless explicitly told to. List names/keys only.
-- Style: `caveman-mode` (short, direct, code over prose). Every task ends with 1-2 lines: what was skipped, what was not checked, risk.
+- `devops-lead` — routes ops requests, runs the gate, delivers. Does not do ops work.
+  - `devops-agent` — CI/CD, pipelines, Dockerfiles, GitOps manifests, GitHub ops.
+  - `terraform-specialist` — `.tf` work. Plans come from CI; local = `init -backend=false` + `validate` only.
+  - `k8s-troubleshooter` — evidence-first incident RCA; fixes go through PRs, not `kubectl edit`.
+  - `platform-engineer` — internal platform design (golden paths, templates, schemas). Code goes to `idp-dev` via dev-lead.
 
-## Skills
+### 3.4 Cross-team
 
-| Skill | Use |
+- Dev issues found in ops work → task for `dev-lead`.
+- Ops work needing code (e.g. new pipeline features) → built by the devops team.
+- `platform-engineer` designs, `idp-dev` implements.
+
+## 4. Hard rules (all agents)
+
+- No merges. No pushes to `main`/`master`. No force-push. Feature branches branched from up-to-date main.
+- Git identity is never changed. No `--author`. Attribution follows the session's commit/PR instructions.
+- GitHub writes via `gh`. Verify real PR/run state (`gh pr view`, `gh run view`) before stating anything about it.
+- Terraform: `init -backend=false` + `validate` locally. Apply/destroy/plan only in CI, or by a human with confirmation.
+- Production (or anything that looks like it): read-only. Prod, DNS, destructive, or merge actions need explicit user sign-off; the exact command is handed over.
+- Secrets: never printed, logged, or committed. Never read `.env`, PEM, or credential files unless explicitly asked. List names only.
+- Output style: short, direct. Every task ends with what was skipped, what was not checked, and the risk.
+
+## 5. Skills
+
+| Skill | Purpose |
 |---|---|
-| `caveman-mode` | Lazy-ops scope-discipline/blast-radius checklist for infra/K8s/Terraform/GitOps changes. Loads for ops work, not general chat. |
-| `todo-discipline` | Tracking multi-step work with `TodoWrite` — item = outcome + owner + proof; gates are items too. Mandatory for leads on 3+ step or 2+ subagent work. |
-| `workflow-path-triggers` | Scoping CI/CD `on.push.paths` in multi-app repos so one app's change doesn't trigger another's pipeline. |
-| `spec-workflow` | Conventions for multi-step spec work: when to write one, where it lives, naming. |
-| `security-audit` | Security review/vulnerability guidance for codebases, APIs, CLIs, libraries, daemons. |
-| `enterprise-report` | Generates a print-ready corporate-style HTML/PDF report (status, RCA, analysis). |
+| `caveman-mode` | Scope-discipline and blast-radius checklist for infra/K8s/Terraform/GitOps changes |
+| `todo-discipline` | Multi-step tracking with `TodoWrite`; items are outcome + owner + proof |
+| `workflow-path-triggers` | Scope CI `on.push.paths` in multi-app repos |
+| `spec-workflow` | When and where to write specs for multi-step work |
+| `security-audit` | Security review and vulnerability guidance |
+| `enterprise-report` | Print-ready HTML/PDF report generator |
 
-Skills are available to the main session and every agent; agents reference the specific ones relevant to their role in their own frontmatter/body.
+## 6. Settings
 
-## Notes
+`settings.json` holds: model env vars (section 1), default model and effort, `modelSettings`, theme, MCP servers, and permissions.
 
-- All agent/repo/cluster names here are generic placeholders — fill in real repo paths, cluster contexts, and stack details per project as you encounter them; nothing is hardcoded to a specific org anymore.
-- Output files (specs, reports, scratch): `~/work/specs/`, `~/work/reports/`, ad hoc temp dirs cleaned up after the task.
-- Not yet audited: `settings.json` permission entries may still reference MCP servers (e.g. Splunk, EKS/AKS contexts, Atlassian) tied to the deleted/retired tooling — check if you hit a permission error naming a tool that no longer applies.
+Open item: `mcpServers` and permission entries may still reference tools from retired setups (Splunk, EKS/AKS, Atlassian). Audit before relying on them.
+
+## 7. Files and output locations
+
+- Specs: `~/work/specs/`
+- Reports: `~/work/reports/`
+- Scratch: removed by the agent that created it, once the task is done.
